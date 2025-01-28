@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RedSpace Voice Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-red: #ff4444;
+            --dark-red: #cc0000;
+            --space-black: #0a0a1a;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(45deg, var(--space-black), #1a1a2e);
+            color: white;
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Space background stars */
+        .stars {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        header {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .call-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 2rem;
+        }
+
+        .call-button {
+            background: var(--primary-red);
+            padding: 1.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .call-button:hover {
+            transform: scale(1.1);
+        }
+
+        .status-indicator {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 0, 0.2);
+            border-radius: 20px;
+            display: none;
+        }
+
+        .chat-box {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars"></div>
+    
+    <header>
+        <div class="logo">RedSpace</div>
+        <div class="controls">
+            <span id="onlineStatus"><i class="fas fa-circle"></i> Online</span>
+            <span id="userCount"><i class="fas fa-users"></i> 0</span>
+            <button id="filterBtn"><i class="fas fa-filter"></i></button>
+        </div>
+    </header>
+
+    <div class="call-container">
+        <div class="call-button" id="callButton">
+            <i class="fas fa-phone fa-2x"></i>
+        </div>
+        <div class="status-indicator" id="statusIndicator">
+            Connected to <span id="countryFlag">🇺🇸</span> User
+        </div>
+    </div>
+
+    <div class="chat-box">
+        <div id="chatMessages"></div>
+        <input type="text" id="chatInput" placeholder="Type message...">
+    </div>
+
+    <script>
+        // WebRTC Configuration
+        const config = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        };
+
+        let peerConnection;
+        let localStream;
+        let dataChannel;
+
+        // Get user media
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                localStream = stream;
+            });
+
+        // Call button handler
+        document.getElementById('callButton').addEventListener('click', connectToRandomUser);
+
+        // WebRTC Functions
+        async function connectToRandomUser() {
+            peerConnection = new RTCPeerConnection(config);
+            
+            // Add local stream
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+
+            // Create data channel
+            dataChannel = peerConnection.createDataChannel('chat');
+            setupDataChannel();
+
+            // Create offer
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            
+            // Send offer to signaling server (simplified)
+            signalingServer.send(JSON.stringify({
+                type: 'offer',
+                sdp: offer.sdp
+            }));
+        }
+
+        function setupDataChannel() {
+            dataChannel.onmessage = handleChatMessage;
+            dataChannel.onopen = () => console.log('Chat connected');
+        }
+
+        function handleChatMessage(event) {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML += `<div>${event.data}</div>`;
+        }
+
+        // Mock signaling server
+        const signalingServer = {
+            send: function(data) {
+                // Handle signaling server communication
+                console.log('Sending:', data);
+            }
+        };
+    </script>
+
+    <script>
+        // Add star background animation
+        function createStars() {
+            const container = document.querySelector('.stars');
+            for (let i = 0; i < 200; i++) {
+                const star = document.createElement('div');
+                star.style.position = 'absolute';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.width = Math.random() * 3 + 'px';
+                star.style.height = star.style.width;
+                star.style.backgroundColor = 'white';
+                star.style.borderRadius = '50%';
+                star.style.opacity = Math.random();
+                container.appendChild(star);
+            }
+        }
+        createStars();
+    </script>
+</body>
+</html>
